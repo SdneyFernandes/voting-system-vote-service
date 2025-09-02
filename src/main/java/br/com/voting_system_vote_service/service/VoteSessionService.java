@@ -6,6 +6,12 @@ import br.com.voting_system_vote_service.entity.*;
 import br.com.voting_system_vote_service.enums.VoteStatus;
 import br.com.voting_system_vote_service.repository.*;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -53,9 +59,32 @@ public class VoteSessionService {
 
         UserDTO creator;
         try {
-            ResponseEntity<UserDTO> response = restTemplate.getForEntity(
-                    USER_SERVICE_URL + voteSessionDTO.getCreatorId(), UserDTO.class);
+            // 1. Pegar os cabeçalhos X-User-Id e X-User-Role da requisição original
+            String userId = getHeaderFromCurrentRequest("X-User-Id");
+            String userRole = getHeaderFromCurrentRequest("X-User-Role");
+
+            // 2. Criar os cabeçalhos para a nova requisição
+            HttpHeaders headers = new HttpHeaders();
+            if (userId != null && userRole != null) {
+                headers.set("X-User-Id", userId);
+                headers.set("X-User-Role", userRole);
+                logger.info("Propagando cabeçalhos - X-User-Id: {}, X-User-Role: {}", userId, userRole);
+            } else {
+                logger.warn("Cabeçalhos de autenticação não encontrados na requisição original.");
+            }
+            
+            // 3. Criar a entidade da requisição com os cabeçalhos
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            // 4. Usar restTemplate.exchange() para enviar a requisição com os cabeçalhos corretos
+            ResponseEntity<UserDTO> response = restTemplate.exchange(
+                    USER_SERVICE_URL + voteSessionDTO.getCreatorId(),
+                    HttpMethod.GET,
+                    entity,
+                    UserDTO.class);
+                    
             creator = response.getBody();
+
         } catch (HttpClientErrorException.NotFound e) {
             logger.warn("[USER-SERVICE] Usuário com ID {} não encontrado.", voteSessionDTO.getCreatorId());
             throw new IllegalStateException("Usuário criador não encontrado");
@@ -63,7 +92,8 @@ public class VoteSessionService {
             logger.error("[USER-SERVICE] Erro ao acessar o serviço de usuários", e);
             throw new IllegalStateException("Falha na comunicação com o serviço de usuários", e);
         }
-
+        
+        // O resto do seu método continua exatamente igual
         if (creator == null || creator.getId() == null) {
             throw new IllegalStateException("Usuário criador inválido ou resposta inválida do serviço de usuários");
         }
@@ -73,6 +103,10 @@ public class VoteSessionService {
             throw new SecurityException("Apenas administradores podem criar sessões de votação");
         }
 
+        // ... etc
+        
+        // (cole o resto do seu método aqui)
+        
         if (voteSessionDTO.getStartAt() == null || voteSessionDTO.getEndAt() == null) {
             throw new IllegalArgumentException("Datas de início e término são obrigatórias");
         }
@@ -114,6 +148,16 @@ public class VoteSessionService {
         logger.info("[CREATE] Sessão criada com ID: {}", saved.getId());
 
         return new VoteSessionDTO(saved);
+    }
+
+    // Adicione este novo método auxiliar na sua classe
+    private String getHeaderFromCurrentRequest(String headerName) {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            return request.getHeader(headerName);
+        }
+        return null;
     }
     
     
