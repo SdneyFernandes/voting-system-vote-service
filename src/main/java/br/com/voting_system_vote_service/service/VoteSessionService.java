@@ -103,9 +103,6 @@ public class VoteSessionService {
             throw new SecurityException("Apenas administradores podem criar sessões de votação");
         }
 
-        // ... etc
-        
-        // (cole o resto do seu método aqui)
         
         if (voteSessionDTO.getStartAt() == null || voteSessionDTO.getEndAt() == null) {
             throw new IllegalArgumentException("Datas de início e término são obrigatórias");
@@ -117,9 +114,9 @@ public class VoteSessionService {
             throw new IllegalArgumentException("A data de início deve ser antes da data de término");
         }
 
-        if (voteSessionDTO.getEndAt().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Não é permitido criar sessão com data já expirada");
-        }
+        if (voteSessionDTO.getEndAt().atZone(ZoneId.of("UTC")).toInstant().isBefore(Instant.now())) {
+        throw new IllegalArgumentException("Não é permitido criar sessão com data já expirada");
+    }
 
         if (voteSessionDTO.getOptions() == null || voteSessionDTO.getOptions().size() < 2) {
             logger.error("[VALIDAÇÃO] Número insuficiente de opções: {}",
