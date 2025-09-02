@@ -41,9 +41,9 @@ public class VoteSessionService {
     private final VoteRepository voteRepository;
     private final RestTemplate restTemplate;
     
-    private static final String USER_SERVICE_URL = "http://localhost:8083/api/users/";
+    private static final String USER_SERVICE_URL = "http://voting-system-user-service/api/users/";
 
-    public VoteSessionDTO createVoteSession(VoteSessionDTO voteSessionDTO) {
+     public VoteSessionDTO createVoteSession(VoteSessionDTO voteSessionDTO) {
         logger.info("[CREATE] Criando nova sessão de votação...");
         meterRegistry.counter("votacao.criar.chamadas").increment();
 
@@ -210,7 +210,7 @@ public class VoteSessionService {
     }
 
     
-    public List<VoteSessionDTO> getSessionsVotedByUser(Long userId) {
+   public List<VoteSessionDTO> getSessionsVotedByUser(Long userId) {
         logger.info("[BUSCA] Sessões votadas pelo usuário ID {}", userId);
         try {
             List<VoteSessionDTO> sessions = voteRepository.findByUserId(userId).stream()
@@ -226,6 +226,4 @@ public class VoteSessionService {
             throw new RuntimeException("Falha ao buscar sessões votadas", e);
         }
     }
-
-    
 }
