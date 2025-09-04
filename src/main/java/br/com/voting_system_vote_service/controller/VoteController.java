@@ -1,8 +1,6 @@
 package br.com.voting_system_vote_service.controller;
 
-import br.com.voting_system_vote_service.service. *;
-import br.com.voting_system_vote_service.dto.*;
-
+import br.com.voting_system_vote_service.service.VoteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
@@ -10,10 +8,6 @@ import org.slf4j.LoggerFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.*;
-
-
 
 /**
  * @author fsdney
@@ -24,33 +18,31 @@ import java.util.*;
 @Tag(name = "Vote", description = "Endpoints relacionados ao registro de votos")
 public class VoteController {
 
-	private static final Logger logger = LoggerFactory.getLogger(VoteController.class);
-	
-	@Autowired
-	private VoteService voteService;
-	
-	
-	@Operation(summary = "Registrar um voto", description = "Registra um voto para uma sessão existente.")
-	@PostMapping("/{voteSessionId}/cast")
+    private static final Logger logger = LoggerFactory.getLogger(VoteController.class);
+    
+    @Autowired
+    private VoteService voteService;
+    
+    @Operation(summary = "Registrar um voto", description = "Registra um voto para uma sessão existente.")
+    @PostMapping("/{voteSessionId}/cast")
     public ResponseEntity<String> castVote(
             @PathVariable Long voteSessionId,
             @RequestParam(required = true) Long userId,
-            @RequestParam(required = true) String option) {
-		logger.info("Recebida requisição para registar voto");
-        String responseMessage = voteService.castVote(voteSessionId, userId, option);
-        return ResponseEntity.ok(responseMessage);
+            @RequestParam(required = true) String option,
+            @RequestHeader("X-User-Id") String xUserId,
+            @RequestHeader("X-User-Role") String xUserRole) {
+        
+        logger.info("Recebida requisição para registrar voto - X-User-Id: {}, X-User-Role: {}", xUserId, xUserRole);
+        
+        try {
+            String responseMessage = voteService.castVote(voteSessionId, userId, option, xUserId, xUserRole);
+            return ResponseEntity.ok(responseMessage);
+        } catch (IllegalStateException e) {
+            logger.error("Erro ao registrar voto: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("Erro interno ao registrar voto: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body("Erro interno ao processar voto");
+        }
     }
-	
 }
-
-
-
-
-
-
-
-
-
-
-
-

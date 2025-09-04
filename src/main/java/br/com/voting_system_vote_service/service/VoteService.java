@@ -1,4 +1,3 @@
-// src/main/java/br/com/voting_system_vote_service/service/VoteService.java
 package br.com.voting_system_vote_service.service;
 
 import br.com.voting_system_vote_service.dto.UserDTO;
@@ -10,7 +9,6 @@ import br.com.voting_system_vote_service.repository.VoteResultRepository;
 import br.com.voting_system_vote_service.repository.VoteSessionRepository;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.*;
@@ -41,7 +37,7 @@ public class VoteService {
 
     private static final String USER_SERVICE_URL = "http://voting-system-user-service/api/users/";
 
-    public String castVote(Long voteSessionId, Long userId, String option) {
+    public String castVote(Long voteSessionId, Long userId, String option, String xUserIdHeader, String xUserRoleHeader) {
         long start = System.currentTimeMillis();
         meterRegistry.counter("votos.chamadas").increment();
 
@@ -49,14 +45,16 @@ public class VoteService {
 
         UserDTO user;
         try {
-            // Propagando os headers originais da requisição
+            // Usando os headers passados como parâmetro
             HttpHeaders headers = new HttpHeaders();
-            String xUserId = getHeaderFromCurrentRequest("X-User-Id");
-            String xUserRole = getHeaderFromCurrentRequest("X-User-Role");
-            if (xUserId != null && xUserRole != null) {
-                headers.set("X-User-Id", xUserId);
-                headers.set("X-User-Role", xUserRole);
+            if (xUserIdHeader != null && xUserRoleHeader != null) {
+                headers.set("X-User-Id", xUserIdHeader);
+                headers.set("X-User-Role", xUserRoleHeader);
+                logger.info("Headers propagados para User Service: X-User-Id={}, X-User-Role={}", xUserIdHeader, xUserRoleHeader);
+            } else {
+                logger.warn("Headers de autenticação não recebidos");
             }
+            
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             ResponseEntity<UserDTO> response = restTemplate.exchange(
@@ -81,15 +79,15 @@ public class VoteService {
         VoteSession session = voteSessionRepository.findById(voteSessionId)
         .orElseThrow(() -> new RuntimeException("Sessão de votação não encontrada"));
 
-        Instant now = Instant.now(); // Pega o momento atual em UTC, do tipo Instant
-if (now.isBefore(session.getStartAt())) { // CORRETO: Instant.isBefore(Instant)
-    logger.warn("Sessão {} ainda não iniciou", voteSessionId);
-    throw new RuntimeException("A votação ainda não está aberta");
-}
-if (now.isAfter(session.getEndAt())) { // CORRETO: Instant.isAfter(Instant)
-    logger.warn("Sessão {} encerrada", voteSessionId);
-    throw new RuntimeException("A votação já foi encerrada");
-}
+        Instant now = Instant.now();
+        if (now.isBefore(session.getStartAt())) {
+            logger.warn("Sessão {} ainda não iniciou", voteSessionId);
+            throw new RuntimeException("A votação ainda não está aberta");
+        }
+        if (now.isAfter(session.getEndAt())) {
+            logger.warn("Sessão {} encerrada", voteSessionId);
+            throw new RuntimeException("A votação já foi encerrada");
+        }
 
         if (!session.getOptions().contains(option)) {
             logger.warn("Opção inválida: {}", option);
@@ -133,14 +131,5 @@ if (now.isAfter(session.getEndAt())) { // CORRETO: Instant.isAfter(Instant)
 
         logger.info("Voto registrado: usuário {} sessão {}", userId, voteSessionId);
         return "Voto registrado com sucesso!";
-    }
-
-    private String getHeaderFromCurrentRequest(String headerName) {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes != null) {
-            HttpServletRequest request = attributes.getRequest();
-            return request.getHeader(headerName);
-        }
-        return null;
     }
 }

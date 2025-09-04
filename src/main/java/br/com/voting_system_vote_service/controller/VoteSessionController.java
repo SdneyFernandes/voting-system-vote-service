@@ -68,7 +68,6 @@ public class VoteSessionController {
 
 	@Operation(summary = "Obter resultados da sessão de votação")
     @GetMapping("/{voteSessionId}/results")
-	
 	public ResponseEntity<Map<String, Object>> getVoteResults(@PathVariable Long voteSessionId) {
 		logger.info("Recebida requisição para buscar resultados da sessão de votação");
 		Map<String, Object> results = voteSessionService.getVoteResults(voteSessionId);
