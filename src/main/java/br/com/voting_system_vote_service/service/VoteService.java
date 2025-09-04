@@ -1,23 +1,29 @@
+// src/main/java/br/com/voting_system_vote_service/service/VoteService.java
 package br.com.voting_system_vote_service.service;
 
 import br.com.voting_system_vote_service.dto.UserDTO;
 import br.com.voting_system_vote_service.entity.Vote;
-import br.com.voting_system_vote_service.entity.VoteSession;
 import br.com.voting_system_vote_service.entity.VoteResult;
+import br.com.voting_system_vote_service.entity.VoteSession;
 import br.com.voting_system_vote_service.repository.VoteRepository;
-import br.com.voting_system_vote_service.repository.VoteSessionRepository;
 import br.com.voting_system_vote_service.repository.VoteResultRepository;
-import br.com.voting_system_vote_service.dto.*;
+import br.com.voting_system_vote_service.repository.VoteSessionRepository;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.LocalDateTime;
-import java.util. *;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -33,7 +39,7 @@ public class VoteService {
     private final VoteResultRepository voteResultRepository;
     private final MeterRegistry meterRegistry;
 
-    private static final String USER_SERVICE_URL = "http://localhost:8083/api/users/";
+    private static final String USER_SERVICE_URL = "http://voting-system-user-service/api/users/";
 
     public String castVote(Long voteSessionId, Long userId, String option) {
         long start = System.currentTimeMillis();
@@ -43,24 +49,47 @@ public class VoteService {
 
         UserDTO user;
         try {
-            user = restTemplate.getForObject(USER_SERVICE_URL + userId, UserDTO.class);
-        } catch (Exception e) {
-            logger.error("Erro ao buscar usuário: {}", e.getMessage());
-            throw new RuntimeException("Usuário não encontrado. O voto não pode ser registrado.");
+            // Propagando os headers originais da requisição
+            HttpHeaders headers = new HttpHeaders();
+            String xUserId = getHeaderFromCurrentRequest("X-User-Id");
+            String xUserRole = getHeaderFromCurrentRequest("X-User-Role");
+            if (xUserId != null && xUserRole != null) {
+                headers.set("X-User-Id", xUserId);
+                headers.set("X-User-Role", xUserRole);
+            }
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<UserDTO> response = restTemplate.exchange(
+                    USER_SERVICE_URL + userId,
+                    HttpMethod.GET,
+                    entity,
+                    UserDTO.class
+            );
+            user = response.getBody();
+        } catch (HttpClientErrorException.NotFound e) {
+            logger.warn("Usuário {} não encontrado", userId);
+            throw new IllegalStateException("Usuário não encontrado. O voto não pode ser registrado.");
+        } catch (RestClientException e) {
+            logger.error("Erro ao comunicar com USER-SERVICE", e);
+            throw new IllegalStateException("Falha ao buscar usuário. O voto não pode ser registrado.", e);
+        }
+
+        if (user == null || user.getId() == null) {
+            throw new IllegalStateException("Usuário inválido ou resposta inválida do serviço de usuários");
         }
 
         VoteSession session = voteSessionRepository.findById(voteSessionId)
-                .orElseThrow(() -> new RuntimeException("Sessão de votação não encontrada"));
+        .orElseThrow(() -> new RuntimeException("Sessão de votação não encontrada"));
 
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(session.getStartAt())) {
-            logger.warn("Sessão {} ainda não iniciou", voteSessionId);
-            throw new RuntimeException("A votação ainda não está aberta");
-        }
-        if (now.isAfter(session.getEndAt())) {
-            logger.warn("Sessão {} encerrada", voteSessionId);
-            throw new RuntimeException("A votação já foi encerrada");
-        }
+        Instant now = Instant.now(); // Pega o momento atual em UTC, do tipo Instant
+if (now.isBefore(session.getStartAt())) { // CORRETO: Instant.isBefore(Instant)
+    logger.warn("Sessão {} ainda não iniciou", voteSessionId);
+    throw new RuntimeException("A votação ainda não está aberta");
+}
+if (now.isAfter(session.getEndAt())) { // CORRETO: Instant.isAfter(Instant)
+    logger.warn("Sessão {} encerrada", voteSessionId);
+    throw new RuntimeException("A votação já foi encerrada");
+}
 
         if (!session.getOptions().contains(option)) {
             logger.warn("Opção inválida: {}", option);
@@ -82,6 +111,7 @@ public class VoteService {
             Map<String, Object> results = voteSessionService.getVoteResults(voteSessionId);
             voteResultRepository.deleteAllBySessionId(voteSessionId);
 
+            @SuppressWarnings("unchecked")
             Map<String, Long> resultadoMap = (Map<String, Long>) results.get("resultado");
             if (resultadoMap != null) {
                 for (Map.Entry<String, Long> entry : resultadoMap.entrySet()) {
@@ -104,7 +134,13 @@ public class VoteService {
         logger.info("Voto registrado: usuário {} sessão {}", userId, voteSessionId);
         return "Voto registrado com sucesso!";
     }
-    
 
-
+    private String getHeaderFromCurrentRequest(String headerName) {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            return request.getHeader(headerName);
+        }
+        return null;
+    }
 }

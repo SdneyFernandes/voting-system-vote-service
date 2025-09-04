@@ -1,12 +1,11 @@
 package br.com.voting_system_vote_service.entity;
 
 import br.com.voting_system_vote_service.enums.VoteStatus;
+import jakarta.persistence.*;
+import lombok.*;
 
-import jakarta.persistence. *;
-import lombok. *;
+import java.time.Instant;
 import java.util.List;
-
-import java.time.LocalDateTime;
 
 /**
  * @author fsdney
@@ -17,162 +16,107 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VoteSession {
-	
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	@Column(length = 100 ,nullable = false)
-	private String title;
-	
-	 @Column(length = 500, nullable = false)
-	 private String description;
-	
-	@ElementCollection
-	private List<String> options;
-	
-	@Column(name = "creator_id", nullable = false)
-	private Long creatorId;
-	
-	@Column(nullable = false)
-	private LocalDateTime endAt;
-	
-	@Column(nullable = false)
-	private LocalDateTime startAt;
-	
-	@Enumerated(EnumType.STRING)
-	private VoteStatus status;
-	
-	
-	
-	
-	//define o status baseado na data do servidor no momento da  eleição e atualiza dinamicamente
-	//evita que votações antigas apareçam ainda como ativas
-	public void updateStatus() {
-		LocalDateTime now = LocalDateTime.now();
-		if (now.isBefore(startAt)) {
-			status = VoteStatus.NOT_STARTED;
-		} else if (now.isAfter(endAt)) {
-			status = VoteStatus.ENDED;
-		} else {
-			status = VoteStatus.ACTIVE;
-		}
-	}
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(length = 100, nullable = false)
+    private String title;
 
+    @Column(length = 500, nullable = false)
+    private String description;
 
-	public Long getId() {
-		return id;
-	}
+    @ElementCollection
+    private List<String> options;
 
+    @Column(name = "creator_id", nullable = false)
+    private Long creatorId;
 
+    @Column(nullable = false)
+    private Instant endAt;
 
+    @Column(nullable = false)
+    private Instant startAt;
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    @Enumerated(EnumType.STRING)
+    private VoteStatus status;
 
+    // Atualiza status com base no horário atual em UTC
+    public void updateStatus() {
+        Instant now = Instant.now();
+        if (now.isBefore(startAt)) {
+            status = VoteStatus.NOT_STARTED;
+        } else if (now.isAfter(endAt)) {
+            status = VoteStatus.ENDED;
+        } else {
+            status = VoteStatus.ACTIVE;
+        }
+    }
 
+    // Getters e Setters
 
+    public Long getId() {
+        return id;
+    }
 
-	public String getTitle() {
-		return title;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
+    public String getTitle() {
+        return title;
+    }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
+    public String getDescription() {
+        return description;
+    }
 
-	public void setTitle(String title) {
-		this.title = title;
-	}
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    
-	
+    public List<String> getOptions() {
+        return options;
+    }
 
+    public void setOptions(List<String> options) {
+        this.options = options;
+    }
 
-	public List<String> getOptions() {
-		return options;
-	}
+    public Long getCreatorId() {
+        return creatorId;
+    }
 
+    public void setCreatorId(Long creatorId) {
+        this.creatorId = creatorId;
+    }
 
+    public Instant getEndAt() {
+        return endAt;
+    }
 
+    public void setEndAt(Instant endAt) {
+        this.endAt = endAt;
+    }
 
-	public void setOptions(List<String> options) {
-		this.options = options;
-	}
+    public Instant getStartAt() {
+        return startAt;
+    }
 
+    public void setStartAt(Instant startAt) {
+        this.startAt = startAt;
+    }
 
+    public VoteStatus getStatus() {
+        return status;
+    }
 
-
-	public Long getCreatorId() {
-		return creatorId;
-	}
-
-
-
-
-	public void setCreatorId(Long creatorId) {
-		this.creatorId = creatorId;
-	}
-
-
-
-
-	public LocalDateTime getEndAt() {
-		return endAt;
-	}
-
-
-
-
-	public void setEndAt(LocalDateTime endAt) {
-		this.endAt = endAt;
-	}
-
-
-
-
-	public LocalDateTime getStartAt() {
-		return startAt;
-	}
-
-
-
-
-	public void setStartAt(LocalDateTime startAt) {
-		this.startAt = startAt;
-	}
-
-
-
-
-	public VoteStatus getStatus() {
-		return status;
-	}
-
-
-
-
-	public void setStatus(VoteStatus status) {
-		this.status = status;
-	}
-
-
-
-
-	public String getDescription() {
-		return description;
-	}
-
-
-
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
-	
-	
-	
+    public void setStatus(VoteStatus status) {
+        this.status = status;
+    }
 }

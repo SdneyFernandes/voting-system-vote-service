@@ -1,38 +1,30 @@
 package br.com.voting_system_vote_service.service;
 
-
-import br.com.voting_system_vote_service.dto.*;
-import br.com.voting_system_vote_service.entity.*;
+import br.com.voting_system_vote_service.dto.UserDTO;
+import br.com.voting_system_vote_service.dto.VoteSessionDTO;
+import br.com.voting_system_vote_service.entity.Vote;
+import br.com.voting_system_vote_service.entity.VoteSession;
 import br.com.voting_system_vote_service.enums.VoteStatus;
-import br.com.voting_system_vote_service.repository.*;
+import br.com.voting_system_vote_service.repository.VoteRepository;
+import br.com.voting_system_vote_service.repository.VoteSessionRepository;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
-
 import lombok.RequiredArgsConstructor;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.http.*;
-import io.micrometer.core.instrument.MeterRegistry;
-import java.util.concurrent.TimeUnit;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
-import java.time.ZoneId;
-
-import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 
 /**
  * @author fsdney
@@ -48,10 +40,10 @@ public class VoteSessionService {
     private final VoteSessionRepository voteSessionRepository;
     private final VoteRepository voteRepository;
     private final RestTemplate restTemplate;
-    
+
     private static final String USER_SERVICE_URL = "http://voting-system-user-service/api/users/";
 
-     public VoteSessionDTO createVoteSession(VoteSessionDTO voteSessionDTO) {
+    public VoteSessionDTO createVoteSession(VoteSessionDTO voteSessionDTO) {
         logger.info("[CREATE] Criando nova sessão de votação...");
         meterRegistry.counter("votacao.criar.chamadas").increment();
 
@@ -74,7 +66,7 @@ public class VoteSessionService {
             } else {
                 logger.warn("Cabeçalhos de autenticação não encontrados na requisição original.");
             }
-            
+
             // 3. Criar a entidade da requisição com os cabeçalhos
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -84,7 +76,7 @@ public class VoteSessionService {
                     HttpMethod.GET,
                     entity,
                     UserDTO.class);
-                    
+
             creator = response.getBody();
 
         } catch (HttpClientErrorException.NotFound e) {
@@ -94,8 +86,7 @@ public class VoteSessionService {
             logger.error("[USER-SERVICE] Erro ao acessar o serviço de usuários", e);
             throw new IllegalStateException("Falha na comunicação com o serviço de usuários", e);
         }
-        
-        // O resto do seu método continua exatamente igual
+
         if (creator == null || creator.getId() == null) {
             throw new IllegalStateException("Usuário criador inválido ou resposta inválida do serviço de usuários");
         }
@@ -105,7 +96,6 @@ public class VoteSessionService {
             throw new SecurityException("Apenas administradores podem criar sessões de votação");
         }
 
-        
         if (voteSessionDTO.getStartAt() == null || voteSessionDTO.getEndAt() == null) {
             throw new IllegalArgumentException("Datas de início e término são obrigatórias");
         }
@@ -116,9 +106,9 @@ public class VoteSessionService {
             throw new IllegalArgumentException("A data de início deve ser antes da data de término");
         }
 
-        if (voteSessionDTO.getEndAt().atZone(ZoneId.of("UTC")).toInstant().isBefore(Instant.now())) {
-        throw new IllegalArgumentException("Não é permitido criar sessão com data já expirada");
-    }
+        if (voteSessionDTO.getEndAt().isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Não é permitido criar sessão com data já expirada");
+        }
 
         if (voteSessionDTO.getOptions() == null || voteSessionDTO.getOptions().size() < 2) {
             logger.error("[VALIDAÇÃO] Número insuficiente de opções: {}",
@@ -126,8 +116,9 @@ public class VoteSessionService {
             throw new IllegalArgumentException("É necessário fornecer pelo menos 2 opções de voto");
         }
 
+        // Determinar status com base no tempo atual UTC
+        Instant now = Instant.now();
         VoteStatus status;
-        LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(voteSessionDTO.getStartAt())) {
             status = VoteStatus.NOT_STARTED;
         } else {
@@ -149,7 +140,7 @@ public class VoteSessionService {
         return new VoteSessionDTO(saved);
     }
 
-    // Adicione este novo método auxiliar na sua classe
+    // Recuperar cabeçalho da request atual
     private String getHeaderFromCurrentRequest(String headerName) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
@@ -158,8 +149,7 @@ public class VoteSessionService {
         }
         return null;
     }
-    
-    
+
     public List<VoteSessionDTO> getAllVoteSessions() {
         logger.info("[LISTAR] Listando todas as sessões de votação...");
         meterRegistry.counter("listar.votacoes.chamadas").increment();
@@ -214,7 +204,7 @@ public class VoteSessionService {
         logger.info("[RESULTADO] Resultado computado: {} (total: {})", resultado, total);
         return response;
     }
-    
+
     public List<VoteSessionDTO> getSessionsCreatedByUser(Long userId) {
         logger.info("[BUSCA] Sessões criadas pelo usuário ID {}", userId);
         meterRegistry.counter("sessoes.criadas.usuario.chamadas").increment();
@@ -232,8 +222,6 @@ public class VoteSessionService {
         return sessions;
     }
 
-
-    
     public List<VoteSessionDTO> getSessionsByStatus(VoteStatus status) {
         logger.info("[BUSCA] Sessões com status {}", status);
         meterRegistry.counter("sessoes.status.chamadas").increment();
@@ -252,8 +240,7 @@ public class VoteSessionService {
         return sessions;
     }
 
-    
-   public List<VoteSessionDTO> getSessionsVotedByUser(Long userId) {
+    public List<VoteSessionDTO> getSessionsVotedByUser(Long userId) {
         logger.info("[BUSCA] Sessões votadas pelo usuário ID {}", userId);
         try {
             List<VoteSessionDTO> sessions = voteRepository.findByUserId(userId).stream()

@@ -1,31 +1,27 @@
 package br.com.voting_system_vote_service.dto;
 
-import br.com.voting_system_vote_service.entity.*;
+import br.com.voting_system_vote_service.entity.VoteSession;
+import br.com.voting_system_vote_service.enums.VoteStatus;
 import jakarta.validation.constraints.*;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
-
-import br.com.voting_system_vote_service.enums.VoteStatus;
-
-
-
 
 /**
  * @author fsdney
  */
-
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class VoteSessionDTO {
 
     @NotNull(message = "Data de início é obrigatória")
     @FutureOrPresent(message = "Data de início deve ser atual ou futura")
-    private LocalDateTime startAt;
+    private Instant startAt;
 
     @NotNull(message = "Data de término é obrigatória")
     @Future(message = "Data de término deve ser futura")
-    private LocalDateTime endAt;
+    private Instant endAt;
 
     @NotNull(message = "ID do criador é obrigatório")
     private Long creatorId;
@@ -59,19 +55,21 @@ public class VoteSessionDTO {
         this.status = voteSession.getStatus();
     }
 
-    public LocalDateTime getStartAt() {
+    // Getters e Setters
+
+    public Instant getStartAt() {
         return startAt;
     }
 
-    public void setStartAt(LocalDateTime startAt) {
+    public void setStartAt(Instant startAt) {
         this.startAt = startAt;
     }
 
-    public LocalDateTime getEndAt() {
+    public Instant getEndAt() {
         return endAt;
     }
 
-    public void setEndAt(LocalDateTime endAt) {
+    public void setEndAt(Instant endAt) {
         this.endAt = endAt;
     }
 
