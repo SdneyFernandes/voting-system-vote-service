@@ -27,10 +27,10 @@ public class VoteSessionDTO {
     private Long creatorId;
 
     @NotBlank(message = "Título é obrigatório")
-    @Size(min = 5, max = 100, message = "Título deve ter entre 5 e 100 caracteres")
+    //@Size(min = 5, max = 100, message = "Título deve ter entre 5 e 100 caracteres")
     private String title;
 
-    @Size(max = 500, message = "Descrição deve ter no máximo 500 caracteres")
+    //@Size(max = 500, message = "Descrição deve ter no máximo 500 caracteres")
     private String description;
 
     @NotNull(message = "Opções são obrigatórias")
