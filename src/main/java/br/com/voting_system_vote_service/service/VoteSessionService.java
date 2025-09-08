@@ -170,18 +170,23 @@ public class VoteSessionService {
     }
 
     public void deleteVoteSession(Long id) {
-        logger.info("[DELETE] Removendo sessão ID {}", id);
-        VoteSession session = voteSessionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Sessão não encontrada"));
+    logger.info("[DELETE] Removendo sessão ID {} e seus votos associados", id);
+    VoteSession session = voteSessionRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Sessão não encontrada"));
 
-        if (!voteRepository.findByVoteSession(session).isEmpty()) {
-            logger.warn("[DELETE] Tentativa de excluir sessão com votos registrados");
-            throw new RuntimeException("Não é possível excluir uma sessão com votos registrados");
-        }
+    // 1. Busca todos os votos associados à sessão
+    List<Vote> votesToDelete = voteRepository.findByVoteSession(session);
 
-        voteSessionRepository.delete(session);
-        logger.info("[DELETE] Sessão excluída com sucesso");
+    // 2. Se existirem votos, deleta todos eles primeiro
+    if (!votesToDelete.isEmpty()) {
+        logger.warn("[DELETE] A sessão {} tem {} voto(s). Deletando os votos primeiro.", id, votesToDelete.size());
+        voteRepository.deleteAll(votesToDelete);
     }
+
+    // 3. Agora, deleta a sessão de votação, que não tem mais votos
+    voteSessionRepository.delete(session);
+    logger.info("[DELETE] Sessão e votos associados excluídos com sucesso");
+}
 
     public Map<String, Object> getVoteResults(Long id) {
         logger.info("[RESULTADO] Resultado da sessão ID {}", id);
