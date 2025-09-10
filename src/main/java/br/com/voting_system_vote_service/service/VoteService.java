@@ -22,6 +22,10 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author fsdney
+ */
+
 @Service
 @RequiredArgsConstructor
 public class VoteService {
@@ -45,7 +49,6 @@ public class VoteService {
 
         UserDTO user;
         try {
-            // Usando os headers passados como parâmetro
             HttpHeaders headers = new HttpHeaders();
             if (xUserIdHeader != null && xUserRoleHeader != null) {
                 headers.set("X-User-Id", xUserIdHeader);

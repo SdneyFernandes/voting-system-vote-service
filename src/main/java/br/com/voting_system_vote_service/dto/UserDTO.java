@@ -5,8 +5,6 @@ package br.com.voting_system_vote_service.dto;
 /**
  * @author fsdney
  * 
- * DTO local usado pelo vote-service para representar usuários.
- * 
  */
 
 

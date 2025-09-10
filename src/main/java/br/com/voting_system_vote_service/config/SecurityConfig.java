@@ -17,15 +17,20 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory; // Importe o Logger
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+
+/**
+ * @author fsdney
+ */
+
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class); // Crie um logger
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -62,7 +67,7 @@ public class SecurityConfig {
 
             @Override
             protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
-                return request.getHeader("X-User-Role"); // Pegue a role do cabeçalho também
+                return request.getHeader("X-User-Role"); 
             }
         };
         filter.setAuthenticationManager(authenticationManager());
@@ -75,7 +80,6 @@ public class SecurityConfig {
             String userId = (String) authentication.getPrincipal();
             String role = (String) authentication.getCredentials();
 
-            // Logs dos cabeçalhos recebidos
             logger.info("Cabeçalhos recebidos - X-User-Id: {}, X-User-Role: {}", userId, role);
 
             if (userId == null || role == null) {
@@ -85,7 +89,7 @@ public class SecurityConfig {
             List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
-            logger.info("Usuário autenticado corretamente: {}", userId); // Log de autenticação bem-sucedida
+            logger.info("Usuário autenticado corretamente: {}", userId); 
             return auth;
         };
     }

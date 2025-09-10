@@ -37,7 +37,6 @@ public class VoteSessionDTO {
     @Size(min = 2, message = "Deve haver pelo menos 2 opções de voto")
     private List<@NotBlank String> options;
 
-    // Somente na resposta
     private Long id;
     private VoteStatus status;
 
@@ -54,8 +53,6 @@ public class VoteSessionDTO {
         this.options = voteSession.getOptions();
         this.status = voteSession.getStatus();
     }
-
-    // Getters e Setters
 
     public Instant getStartAt() {
         return startAt;

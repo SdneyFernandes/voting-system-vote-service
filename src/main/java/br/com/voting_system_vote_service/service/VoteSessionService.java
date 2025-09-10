@@ -53,11 +53,11 @@ public class VoteSessionService {
 
         UserDTO creator;
         try {
-            // 1. Pegar os cabeçalhos X-User-Id e X-User-Role da requisição original
+            
             String userId = getHeaderFromCurrentRequest("X-User-Id");
             String userRole = getHeaderFromCurrentRequest("X-User-Role");
 
-            // 2. Criar os cabeçalhos para a nova requisição
+           
             HttpHeaders headers = new HttpHeaders();
             if (userId != null && userRole != null) {
                 headers.set("X-User-Id", userId);
@@ -67,10 +67,10 @@ public class VoteSessionService {
                 logger.warn("Cabeçalhos de autenticação não encontrados na requisição original.");
             }
 
-            // 3. Criar a entidade da requisição com os cabeçalhos
+           
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // 4. Usar restTemplate.exchange() para enviar a requisição com os cabeçalhos corretos
+            
             ResponseEntity<UserDTO> response = restTemplate.exchange(
                     USER_SERVICE_URL + voteSessionDTO.getCreatorId(),
                     HttpMethod.GET,
@@ -140,7 +140,7 @@ public class VoteSessionService {
         return new VoteSessionDTO(saved);
     }
 
-    // Recuperar cabeçalho da request atual
+    
     private String getHeaderFromCurrentRequest(String headerName) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
@@ -174,16 +174,16 @@ public class VoteSessionService {
     VoteSession session = voteSessionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Sessão não encontrada"));
 
-    // 1. Busca todos os votos associados à sessão
+    
     List<Vote> votesToDelete = voteRepository.findByVoteSession(session);
 
-    // 2. Se existirem votos, deleta todos eles primeiro
+   
     if (!votesToDelete.isEmpty()) {
         logger.warn("[DELETE] A sessão {} tem {} voto(s). Deletando os votos primeiro.", id, votesToDelete.size());
         voteRepository.deleteAll(votesToDelete);
     }
 
-    // 3. Agora, deleta a sessão de votação, que não tem mais votos
+    
     voteSessionRepository.delete(session);
     logger.info("[DELETE] Sessão e votos associados excluídos com sucesso");
 }

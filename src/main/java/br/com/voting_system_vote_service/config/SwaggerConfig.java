@@ -8,17 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
-* Configurações personalizadas do Swagger para documentação da API de votação.
-*/
-
-
-
-/**
  * @author fsdney
  */
-
-
-
 
 @Configuration
 public class SwaggerConfig {
